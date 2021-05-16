@@ -23,6 +23,8 @@ Indeed, patient requests an amount of tabs **every second**, whereas **each tab 
 
 More over, this is the lightest case, where there is only one patient who requests tabs. This _3 workers needed estimation_ is for 1 patient only...
 
+In order to overcome this decoupling need, _Kubernetes Jobs_ can be launched on demand. These jobs allocations would be handled by cluster orchestrator.
+
 ## Auto scaling
 As demonstrated, the whole facility has to lever some autoscaling features (provided by _Kubernetes_) and scale correctly without any human action.
 
