@@ -1,5 +1,5 @@
-import os, json, re, uuid
-import time, datetime, threading, signal
+import os, json, uuid
+import time, threading, signal
 from random import randint
 
 from kafka import KafkaProducer
@@ -22,13 +22,16 @@ class Patient:
 
   def __init__(self, patient_id=None, max_tabs_count=30, period=1):
     """
-    Constructor sets up proerties from needed arguments :
+    Constructor sets up properties from needed arguments :
     patient_id: str
       The patient name to write in order payload
+      Defaults to computed uuid
     max_tabs_count: int
       The maximum number of tabs to order at once
+      Defaults to 30 tabs
     period: int
       The time between 2 orders, in seconds
+      Defaults to 1 second
     """
     if not patient_id:
       patient_id = uuid.uuid4().__str__()
@@ -48,16 +51,32 @@ class Patient:
     Returns a ref to producer, or None on error
     """
     try:
-      self.producer = KafkaProducer(
-        bootstrap_servers=kafka_servers_string,
-        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-        security_protocol='SSL',
-        ssl_check_hostname=True,
-        ssl_cafile='ca.pem',
-        ssl_certfile='service.cert',
-        ssl_keyfile='service.key'
-      ) 
+      if os.path.isfile('medicine_pubsub/certs/service.cert'):
+        self.producer = KafkaProducer(
+          bootstrap_servers=kafka_servers_string,
+          value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+          security_protocol='SSL',
+          ssl_check_hostname=True,
+          ssl_cafile='medicine_pubsub/certs/ca.pem',
+          ssl_certfile='medicine_pubsub/certs/service.cert',
+          ssl_keyfile='medicine_pubsub/certs/service.key'
+        )
+      else:
+        self.producer = KafkaProducer(
+          bootstrap_servers=kafka_servers_string,
+          value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        )
+      # self.producer = KafkaProducer(
+      #   bootstrap_servers=kafka_servers_string,
+      #   value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+      #   security_protocol='SSL',
+      #   ssl_check_hostname=True,
+      #   ssl_cafile='ca.pem',
+      #   ssl_certfile='service.cert',
+      #   ssl_keyfile='service.key'
+      # ) 
     except Exception as e:
+      print(e.__str__())
       self.send_error_to_DLQ({'step':'measurement.setup_producer', 'error':'Could not instanciate Measurement helper kafka producer'})
       return None
 
@@ -69,9 +88,9 @@ class Patient:
     Computes tabs order to be published
 
     RETURNS order as dict():
-    patient_id: str
-    tabs_count: int
-    order_timestamp_ns: int
+    patient_id: str the patient name
+    tabs_count: int random between 1 and configured max_tabs_count
+    order_timestamp_ns: int the timestamp of original order in nanoseconds
     """
     rand_number = randint(1, self.max_tabs_count)
     now_ts_ns = time.time_ns()
@@ -104,9 +123,9 @@ class Patient:
         
       try:
         self.producer.send('tabs.orders', order)
-        print(str(order['order_timestamp_ns']) + ' : Sent order to Kafka (' + str(order['tabs_count']) + ' tabs)')
+        print(order['patient_id'] + ' / '  + str(order['order_timestamp_ns']) + ' : Sent order to Kafka (' + str(order['tabs_count']) + ' tabs)')
       except Exception as e:
-        # self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Kafka', 'order':order})
+        self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Kafka', 'order':order})
         return self.stop_periodic_requests()
 
 
@@ -171,7 +190,8 @@ if(__name__) == '__main__':
   if  "ORBITAL_ORDER_PERIOD_SECONDS" in os.environ:
     ORBITAL_ORDER_PERIOD_SECONDS = os.environ['ORBITAL_ORDER_PERIOD_SECONDS']
 
-  MEDECINEPUBSUB_KAFKA_SERVERS="kafka-3156b977-soille-1151.aivencloud.com:24073"
+  # MEDECINEPUBSUB_KAFKA_SERVERS="kafka-3156b977-soille-1151.aivencloud.com:24073"
+  MEDECINEPUBSUB_KAFKA_SERVERS="medicine-pubsub-kafka-bootstrap:9092"
   if  "MEDECINEPUBSUB_KAFKA_SERVERS" in os.environ:
     MEDECINEPUBSUB_KAFKA_SERVERS = os.environ['MEDECINEPUBSUB_KAFKA_SERVERS']  
 

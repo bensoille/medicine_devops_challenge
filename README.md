@@ -29,7 +29,12 @@ Additional resources :
 ## Build instructions
 > A [convenience build script](make_build.sh) is available for *ubuntu* OS. That shell script performs all following explained build steps for you
 
+> Minikube : Please issue command `` and use *minikube* docker repo directly
+> Then `docker run -d -p 5000:5000 --restart=always --name registry registry:2` to launch a local registry for k8s to pull from
+
 ### Build *Patient* / publisher
+`docker -D build -f patient/Dockerfile -t ben_loftorbital/test_patient_0 .`
+
 ### Build *Medicine* / consumer
 
 ## Deploy instructions
