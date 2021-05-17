@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patient-0
+  labels:
+    app: patient
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: patient
+  template:
+    metadata:
+      labels:
+        app: patient
+    spec:
+      containers:
+      - name: patient
+        image: localhost:5000/ben_loftorbital/test_patient_0
+        imagePullPolicy: IfNotPresent

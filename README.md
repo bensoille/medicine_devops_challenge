@@ -1,6 +1,6 @@
 # Medicine PubSub devops challenge
 
-Trying to fight against a epidemy, we must provide with **on demand** medicine tabs production.
+Trying to fight against a epidemy, we must provide with **on demand** medicine tabs production.     
 Our system must allow additional patients to request tabs without human manual *scale up* action, nor service level degradation.
 
 # Documentation
@@ -11,35 +11,41 @@ Please see :
 # Quick start
 ## Prerequisites
 Technical stack :
+- Minikube running
 - Docker
-- a running Kubernetes cluster, such as *MiniKube*
+- `kubectl` installed
+- `bash` installed
 
-Additional resources :
-- Kafka credentials
+Optional resources :
+- Kafka credentials (only needed for external *Kafka* service, not used in current automatic setup)
 
 ## Prepare infra
-> A [convenience build script](make_infra.sh) is available for *ubuntu* OS. That shell script performs all following explained build steps for you
-> 
-### Deploy *Kafka* stack to *Kubernetes* cluster
-> See topics in Kafka service with `kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --list --bootstrap-server medicine-pubsub-kafka-bootstrap:9092`
+> A [convenience script](make_infra.sh) is available for *bash*. That shell script performs all setup tasks
 
-### Deploy *KEDA* stack to *Kubernetes* cluster
+See [detailed instructions](documentation/PREPARE_INFRA.md) and learn what this [convenience script](make_infra.sh) sets up for you :
+- deploys Kafka service to kubernetes
+- deploys KEDA facilities to kubernetes
+- creates required topics in Kafka
 
 ## Build instructions
-> A [convenience build script](make_build.sh) is available for *ubuntu* OS. That shell script performs all following explained build steps for you
+> A [convenience build script](make_build.sh) is available for *bash* and **minikube**. That shell script performs all build tasks
 
-### Build *Patient* / publisher
-### Build *Medicine* / consumer
+See [detailed build instructions](documentation/BUILD_INSTRUCTIONS.md) and learn what this [convenience build script](make_build.sh) does for you :
+- starts a local docker registry in *minikube*
+- builds *patient* and *medicine* Docker images
+- and tags images to local *minikube* Docker registry
 
 ## Deploy instructions
-> A [convenience deploy script](make_deploy.sh) is available for *ubuntu* OS and *MiniKube* k8s flavor. That shell script performs all following explained deploy steps for you
+> A [convenience deploy script](make_deploy.sh) is available for *bash*. That shell script performs all deploy tasks
 
-### Push docker images to *Kubernetes* cluster repository
-### Deploy *Patient* and *Medicine*
-#### *Patient* as a *Deployment*
-#### *Medicine* as a *ScaledJob*
-
+See [detailed deploy instructions](documentation/DEPLOY_INSTRUCTIONS.md) and learn what this [convenience deploy script](make_deploy.sh) does for you :
+- deploys *patient* as a *deployment* to kubernetes
+- deploys *medicine* as a *scaledJob* to kubernetes
+  
 ## See it work
+### List Kafka topics
+`kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --list --bootstrap-server medicine-pubsub-kafka-bootstrap:9092`
+Optionally log in to Kafka bin with `kubectl exec -it medicine-pubsub-kafka-0 /bin/bash`
 ### Logs
 ### Add more patients
 
