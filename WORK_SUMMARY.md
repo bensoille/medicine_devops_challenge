@@ -1,7 +1,7 @@
 # Medicine PubSup Work Summary
 
 ## Functional need
-Trying to fight a pandemy, we must provide with **on demand** medicine tabs production.
+Trying to fight against a epidemy, we must provide with **on demand** medicine tabs production.
 
 1. _Patients_ publish _every second_ their own need of medicine tabs, between 1 and 30 tabs are needed each time
 2. _Medicine makers_ are in charge of requested tabs realisation, each _tab cannot be made in less than 2 seconds_
@@ -28,20 +28,21 @@ More over, this is the lightest case, where there is only one patient who reques
 ## Auto scaling
 As demonstrated, the whole facility has to lever some autoscaling features (provided by _Kubernetes_) and scale correctly without any human action.
 
-However, regular _horizontal scaling_ would NOT do the job in our use case. Indeed, our _medicine makers_ (aka topic consumers) won't be using much CPU or memory, thus cannot be auto scaled by regular _Kubernetes autoscaler_ feature.
+However, regular _horizontal POD scaler_ would NOT do the job in our use case. Indeed, our _medicine makers_ (aka topic consumers) won't be using much CPU or memory, thus cannot be auto scaled by regular _Kubernetes autoscaler_ feature.
 
 > [Keda](https://keda.sh/) would be used, and allow autoscaling based on _Kafka_ messages delivery delay.
 
-## Specifications
+## Functional Specifications
 > Further detailed specifications can be found [here](documentation/README.md)
 
 ### Patient / producer
 #### Synopsis
 _Patient_ is in charge of following infinite loop :
-- build a new tabs order json object
-- publish this crafted order json to `tabs.orders` _Kafka_ topic
-- wait `ORBITAL_ORDER_PERIOD_SECONDS` seconds
-> Process builds a new tabs request object periodically, frequence is configured via environment variable, at startup time
+- build a new `tabs_order` json object
+- publish this crafted `tabs_order` to `tabs.orders` _Kafka_ topic
+- wait 1 second (configurable) and loop
+
+> The process builds a new `tabs_order` object periodically, frequence is configured via environment variable, at startup time
 
 #### K8s Resource type
 This _Patient_ process should run in a _docker_ container, orchestrated by _Kubernetes_ as a **Deployment** :
@@ -51,13 +52,12 @@ This _Patient_ process should run in a _docker_ container, orchestrated by _Kube
 
 ### Medicine maker / consumer
 #### Synopsis
-_Medicine_ is in charge of :
-- (not needed when a `ScaledJob`) subscription to `tabs.orders` *Kafka* topic
-- checking `tabs_order` incoming payload
-- creation of as many workers as needed tabs with `ThreadPoolController`
-- parallel distribution of tabs creation to each worker in `ThreadPool`
-- creation of tabs, one tab as per worker in `ThreadPool`
+_Medicine_ is in charge of ONE `tabs_order` message :
+- getting only one `tabs_order` message from *Kafka* topic
+- checking `tab_order` incoming payload
+- parallel creation of `tab_item` json objects
 - publishing crafted tabs json objects to `tabs.deliveries` *Kafka* topic, for subsequent delivery handling (out of scope)
+- exit
 
 #### K8s Resource type
 This _Medicine_ process should run in a _docker_ container, orchestrated by _Kubernetes_ and `KEDA` as a **ScaledJob**, with a `Kafka` type *trigger* :

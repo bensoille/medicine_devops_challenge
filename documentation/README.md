@@ -1,11 +1,12 @@
 # Medicine PubSup Specifications
-## Patient / producer
+> Summarized documentation is available [here](../README.md) for a more *functional* point of view
 
+## Patient / producer
 ### Synopsis
 _Patient_ is in charge of following infinite loop :
-- build a new tabs order json object
-- publish this crafted order json to `tabs.orders` _Kafka_ topic
-- wait `ORBITAL_ORDER_PERIOD_SECONDS` seconds
+- build a new `tab_order` json object
+- publish this crafted `tab_order` to `tabs.orders` _Kafka_ topic
+- wait `ORBITAL_ORDER_PERIOD_SECONDS` seconds and loop
 
 ![Functional patient](assets/patient_functional.png)
 
@@ -37,18 +38,35 @@ This _Patient_ process should run in a _docker_ container, orchestrated by _Kube
 ## Medicine maker / consumer
 ### Synopsis
 _Medicine_ is in charge of :
-- (not needed when a `ScaledJob`) subscription to `tabs.orders` *Kafka* topic
+- subscription to `tabs.orders` *Kafka* topic
+- getting only one `tabs_order` message from *Kafka* topic
 - checking `tabs_order` incoming payload
-- creation of as many workers as needed tabs with `ThreadPoolController`
+- creation of as many workers as payload's `tabs_count` with `ThreadPoolController`
 - parallel distribution of tabs creation to each worker in `ThreadPool`
-- creation of tabs, one tab as per worker in `ThreadPool`
-- publishing crafted tabs json objects to `tabs.deliveries` *Kafka* topic, for subsequent delivery handling (out of scope)
+- creation of `tab_item` json object, one `tab_item` as per worker in `ThreadPool`
+- publishing crafted `tab_item` json objects to `tabs.deliveries` *Kafka* topic, for subsequent delivery handling (out of scope)
+- exit
 
 ![Functional medicine maker](assets/medicine_functional.png)
+
+### Configuration items
+The _Medicine_ process accepts following **editable** configuration items, at startup time :
+- kafka *orders topic* to read tabs requests/orders from
+- kafka *deliveries topic* to send made tabs to
+- kafka topic used for DLQ
+- kafka *keda* credentials
+- kafka *pub/sub* credentials
+
+### Tabs items factory
+The _Medicine_ process reads a `tabs_order`, and crafts multiple `tab_item` *json* objects that contain :
+- `patient_id` *string* :               the ID, or name of the patient for whom the tab has been made
+- `order_timestamp_ns` *integer* :      the date (timestamp in nanoseconds) of the original tabs order
+- `delivery_timestamp_ns` *integer* :   the date (timestamp in nanoseconds) at which the tab has been delivered to *delivery topic*
+- `tab_pow` *string* :                  a proof of work, not to wait 2s in vain
 
 ### K8s Resource type
 This _Medicine_ process should run in a _docker_ container, orchestrated by _Kubernetes_ and `KEDA` as a **ScaledJob**, with a `Kafka` type *trigger* :
 - no network access to micro service is needed so far
 - process should start in a decoupled manner
 - numerous jobs may be started, depending on *Patient* process activity
-- process must create every tab of order in same time, and not create huge buffer needs
+- process must create every tab of order in same time, and not create huge buffered needs
