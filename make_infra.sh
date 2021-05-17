@@ -20,8 +20,3 @@ echo "-- topic tabs.deliveries"
 kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 1 --replication-factor 1 --topic tabs.deliveries
 echo "-- topic tabs.dlq"
 kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 1 --replication-factor 1 --topic tabs.dlq
-
-echo "----- Building _Patient_ docker image -----"
-
-
-echo "----- Building _Medicine_ docker image -----"
