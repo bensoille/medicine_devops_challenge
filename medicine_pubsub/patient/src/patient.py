@@ -2,7 +2,6 @@ import os, json, re, uuid
 import time, datetime, threading, signal
 from random import randint
 
-import requests 
 from kafka import KafkaProducer
 
 
