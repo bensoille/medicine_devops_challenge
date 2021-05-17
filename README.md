@@ -13,6 +13,7 @@ Please see :
 Technical stack :
 - Docker
 - a running Kubernetes cluster, such as *MiniKube*
+- `kubectl` 
 
 Additional resources :
 - Kafka credentials
