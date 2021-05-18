@@ -7489,7 +7489,7 @@ metadata:
     app.kubernetes.io/part-of: keda-operator
     app.kubernetes.io/version: 2.2.0
   name: keda-operator
-  namespace: keda
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -7615,7 +7615,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keda-operator
-  namespace: keda
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -7649,7 +7649,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keda-operator
-  namespace: keda
+  namespace: default
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -7666,7 +7666,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keda-operator
-  namespace: keda
+  namespace: default
 ---
 apiVersion: v1
 kind: Service
@@ -7676,7 +7676,7 @@ metadata:
     app.kubernetes.io/part-of: keda-operator
     app.kubernetes.io/version: 2.2.0
   name: keda-metrics-apiserver
-  namespace: keda
+  namespace: default
 spec:
   ports:
   - name: https
@@ -7699,7 +7699,7 @@ metadata:
     app.kubernetes.io/part-of: keda-operator
     app.kubernetes.io/version: 2.2.0
   name: keda-metrics-apiserver
-  namespace: keda
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -7771,7 +7771,7 @@ metadata:
     app.kubernetes.io/part-of: keda-operator
     app.kubernetes.io/version: 2.2.0
   name: keda-operator
-  namespace: keda
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -7841,6 +7841,6 @@ spec:
   insecureSkipTLSVerify: true
   service:
     name: keda-metrics-apiserver
-    namespace: keda
+    namespace: default
   version: v1beta1
   versionPriority: 100

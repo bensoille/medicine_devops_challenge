@@ -77,7 +77,7 @@ class Patient:
       # ) 
     except Exception as e:
       print(e.__str__())
-      self.send_error_to_DLQ({'step':'measurement.setup_producer', 'error':'Could not instanciate Measurement helper kafka producer'})
+      self.send_error_to_DLQ({'step':'medicine.setup_producer', 'error':'Could not instanciate Medicine helper kafka producer'})
       return None
 
     return self.producer
@@ -177,32 +177,37 @@ if(__name__) == '__main__':
   signal.signal(signal.SIGTERM, signal_handler)
   signal.signal(signal.SIGINT, signal_handler)
 
-  # Check that we got our env vars set
-  ORBITAL_PATIENT_ID = None
-  if  "ORBITAL_PATIENT_ID" in os.environ:
-    ORBITAL_PATIENT_ID = os.environ['ORBITAL_PATIENT_ID']
-
-  ORBITAL_MAX_TABS_COUNT = None
-  if  "ORBITAL_MAX_TABS_COUNT" in os.environ:
-    ORBITAL_MAX_TABS_COUNT = os.environ['ORBITAL_MAX_TABS_COUNT']
-
-  ORBITAL_ORDER_PERIOD_SECONDS = None
-  if  "ORBITAL_ORDER_PERIOD_SECONDS" in os.environ:
-    ORBITAL_ORDER_PERIOD_SECONDS = os.environ['ORBITAL_ORDER_PERIOD_SECONDS']
-
-  # MEDECINEPUBSUB_KAFKA_SERVERS="kafka-3156b977-soille-1151.aivencloud.com:24073"
-  MEDECINEPUBSUB_KAFKA_SERVERS="medicine-pubsub-kafka-bootstrap:9092"
-  if  "MEDECINEPUBSUB_KAFKA_SERVERS" in os.environ:
-    MEDECINEPUBSUB_KAFKA_SERVERS = os.environ['MEDECINEPUBSUB_KAFKA_SERVERS']  
-
   try:
+    # Check that we got our env vars set
+    ORBITAL_PATIENT_ID = None
+    if  "ORBITAL_PATIENT_ID" in os.environ:
+      ORBITAL_PATIENT_ID = os.environ['ORBITAL_PATIENT_ID']
+
+    ORBITAL_MAX_TABS_COUNT = None
+    if  "ORBITAL_MAX_TABS_COUNT" in os.environ:
+      ORBITAL_MAX_TABS_COUNT = os.environ['ORBITAL_MAX_TABS_COUNT']
+
+    ORBITAL_ORDER_PERIOD_SECONDS = None
+    if  "ORBITAL_ORDER_PERIOD_SECONDS" in os.environ:
+      ORBITAL_ORDER_PERIOD_SECONDS = os.environ['ORBITAL_ORDER_PERIOD_SECONDS']
+
+    # # MEDECINEPUBSUB_KAFKA_SERVERS="kafka-3156b977-soille-1151.aivencloud.com:24073"
+    # MEDECINEPUBSUB_KAFKA_SERVERS="medicine-pubsub-kafka-bootstrap:9092"
+    # if  "MEDECINEPUBSUB_KAFKA_SERVERS" in os.environ:
+    #   MEDECINEPUBSUB_KAFKA_SERVERS = os.environ['MEDECINEPUBSUB_KAFKA_SERVERS']  
+
+    # MEDECINEPUBSUB_KAFKA_SERVERS = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
+    MEDECINEPUBSUB_KAFKA_SERVERS = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
+
+
     instance = Patient()
     if(instance is None):
-      raise RuntimeError("Could not instanciate Measurement tool")
+      raise RuntimeError("Could not instanciate Medicine tool")
 
+    print("setup producer " + MEDECINEPUBSUB_KAFKA_SERVERS)
     producer = instance.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
     if(producer is None):
-      raise RuntimeError("Could not instanciate Measurement tool's kafka producer")
+      raise RuntimeError("Could not instanciate Medicine tool's kafka producer")
 
     instance.start_periodic_requests()
 

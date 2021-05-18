@@ -11,5 +11,6 @@ echo "----- Building _Patient_ docker image -----"
 docker -D build -f patient/Dockerfile -t localhost:5000/ben_loftorbital/test_patient_0 .
 
 echo "----- Building _Medicine_ docker image -----"
+docker -D build -f medicine/Dockerfile -t localhost:5000/ben_loftorbital/test_medicine_0 .
 
 cd -

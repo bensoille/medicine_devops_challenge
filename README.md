@@ -11,7 +11,7 @@ Please see :
 # Quick start
 ## Prerequisites
 Technical stack :
-- Minikube running
+- Minikube running with `minikube start --cpus=8 --memory=10g`
 - Docker
 - `kubectl` installed
 - `bash` installed
@@ -43,9 +43,17 @@ See [detailed deploy instructions](documentation/DEPLOY_INSTRUCTIONS.md) and lea
 - deploys *medicine* as a *scaledJob* to kubernetes
   
 ## See it work
-### List Kafka topics
+### Kafka topics
 `kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --list --bootstrap-server medicine-pubsub-kafka-bootstrap:9092`
 Optionally log in to Kafka bin with `kubectl exec -it medicine-pubsub-kafka-0 /bin/bash`
+
+#### See messages going through orders topic :
+`kubectl exec -it medicine-pubsub-kafka-1 -- bin/kafka-console-consumer.sh --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --topic tabs.orders`
+#### See messages going through deliveries topic :
+** These are the actual produced medicine tabs going through**. 
+
+`kubectl exec -it medicine-pubsub-kafka-1 -- bin/kafka-console-consumer.sh --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --topic tabs.deliveries`
+
 ### Logs
 ### Add more patients
 

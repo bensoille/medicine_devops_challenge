@@ -15,8 +15,8 @@ kubectl apply -f deploy/keda-2.2.0.yaml
 
 echo "----- Creating Topics in Kafka -----"
 echo "-- topic tabs.orders"
-kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 1 --replication-factor 1 --topic tabs.orders
+kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 18 --replication-factor 1 --topic tabs.orders
 echo "-- topic tabs.deliveries"
-kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 1 --replication-factor 1 --topic tabs.deliveries
+kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 3 --replication-factor 1 --topic tabs.deliveries
 echo "-- topic tabs.dlq"
-kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 1 --replication-factor 1 --topic tabs.dlq
+kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-topics.sh --create --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --partitions 3 --replication-factor 1 --topic tabs.dlq
