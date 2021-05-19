@@ -13,35 +13,16 @@ spec:
           imagePullPolicy: IfNotPresent
         restartPolicy: OnFailure
     backoffLimit: 4  
-  pollingInterval: 1             # Optional. Default: 30 seconds
-  maxReplicaCount: 18             # Optional. Default: 100
-  successfulJobsHistoryLimit: 3   # Optional. Default: 100. How many completed jobs should be kept.
-  #failedJobsHistoryLimit: 2       # Optional. Default: 100. How many failed jobs should be kept.
+  pollingInterval: 1
+  maxReplicaCount: 18
+  successfulJobsHistoryLimit: 3
   scalingStrategy:
-    strategy: "accurate"                        # Optional. Default: default. Which Scaling Strategy to use.
-    # customScalingQueueLengthDeduction: 1      # Optional. A parameter to optimize custom ScalingStrategy.
-    # customScalingRunningJobPercentage: "0.5"  # Optional. A parameter to optimize custom ScalingStrategy.
+    strategy: "accurate"
   triggers:
   - type: kafka
     metadata:
-      # brokerList: kafka.svc:9092 - deprecated
       bootstrapServers: medicine-pubsub-kafka-bootstrap:9092
       consumerGroup: tabs_makers
       topic: 'tabs.orders'
-      # lagThreshold: '5'
       offsetResetPolicy: earliest
-
-
-# apiVersion: batch/v1
-# kind: Job
-# metadata:
-#   name: medicine-maker-0
-# spec:
-#   template:
-#     spec:
-#       containers:
-#       - name: medicine
-#         image: localhost:5000/ben_loftorbital/test_medicine_0
-#         imagePullPolicy: IfNotPresent
-#       restartPolicy: OnFailure
-#   backoffLimit: 4       
+     
