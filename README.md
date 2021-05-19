@@ -117,3 +117,4 @@ The *medicine tabs* production jobs count will scale accordingly (up or down). I
 
 # Yet to be done
 - Refactor and use permanent consumer that creates jobs in k8s ; instead of leaving autoscaling of jobs to KEDA (coldstart, topic partitions number dependency, more realtime)
+- Better use DLQ and implement a recovery strategy by retrying saved failed payloads

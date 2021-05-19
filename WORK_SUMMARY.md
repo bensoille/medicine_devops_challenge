@@ -10,6 +10,8 @@ Better than big sentences, the functional "big picture" description of the neede
 
 ![Functional big picture diagram](documentation/assets/functional.png)
 
+> Final *tab_item* tab representation holds both the _order_ date and the _delivery date_ so that we can think about ways of using it in SLIs computations.
+
 ## Distribution challenge
 This whole system is by nature in need for _elastic_ resources, as :
 - temporality involves decoupling and parallelisation
