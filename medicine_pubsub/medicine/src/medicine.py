@@ -16,7 +16,7 @@ from kafka import KafkaProducer, KafkaConsumer
 #            |_|                              
 class Medicine:
   """
-  Handles tools for response time measurement and metrics forwarding to Kafka topic
+  Handles tools for tabs production and forwarding to Kafka deliveries topic
   """
 
   def __init__(self):
@@ -35,6 +35,9 @@ class Medicine:
     Returns a ref to consumer, or None on error
     """
     try:
+      # Special case for external Kafka service use :
+      # If container has been built with Kafka cert 
+      # files and use external Kafka service with custom servers string provided
       if os.path.isfile('medicine_pubsub/certs/service.cert'):
         self.consumer = KafkaConsumer(
           'tabs.orders',
@@ -77,6 +80,9 @@ class Medicine:
     Returns a ref to producer, or None on error
     """
     try:
+      # Special case for external Kafka service use :
+      # If container has been built with Kafka cert 
+      # files and use external Kafka service with custom servers string provided      
       if os.path.isfile('medicine_pubsub/certs/service.cert'):
         self.producer = KafkaProducer(
           bootstrap_servers=kafka_servers_string,
@@ -101,13 +107,16 @@ class Medicine:
     return self.producer
 
 
-  def make_and_publish_tab(self, messagein, medicineProducer):
+  def make_and_publish_tab(self, messagein, medicineProducer=None):
     """
-    Publishes made tab to Kafka deliveris topic
+    Publishes unique tab_item to Kafka deliveries topic
       messagein: object
-        the metrics string to record to database
+        the tabs_order json object
+      medicineProducer: KafkaProducer
+        the prepared Kafka publisher to deliveries topic
     """
-    # print(messagein['seq_number'])
+
+    # Prepare tab_item object to be returned
     tab_item = {
       "patient_id":             messagein['patient_id'],
       "order_timestamp_ns":     messagein['order_timestamp_ns'],
@@ -117,18 +126,39 @@ class Medicine:
 
     # Compute some kind of dummy proof of work
     will_be_hashed_for_pow = messagein['patient_id'] + str(messagein['order_timestamp_ns']) + str(messagein['seq_number'])
-    # print(will_be_hashed_for_pow)
     m = hashlib.sha256()
     m.update(will_be_hashed_for_pow.encode())
     tab_item["tab_pow"] = m.hexdigest()
 
-    time.sleep(3)
+    # Simulate some 2s processing
+    time.sleep(2)
 
+    # Add delivery nanotime to tab_item object
     tab_item["delivery_timestamp_ns"] = time.time_ns()
 
-    medicineProducer.send('tabs.deliveries', tab_item)
+    # Finally send produced tab_item to deliveries topic
+    if(medicineProducer is not None):
+      medicineProducer.send('tabs.deliveries', tab_item)
+      
     return(tab_item)
 
+
+  def check_tabs_order(self, tabs_order):
+    """
+    Checks received tabs_order structure
+      tabs_order: dict
+        the order issued by patient, received via Kafka
+      
+    RETURNS true if order is correct, false otherwise
+    """
+    if('patient_id' not in tabs_order):
+      return False
+    if('tabs_count' not in tabs_order):
+      return False
+    if('order_timestamp_ns' not in tabs_order):
+      return False
+                 
+    return True
 
   def send_error_to_DLQ(self, error_jsonizable_object):
     """
@@ -164,12 +194,6 @@ def signal_handler(signum, frame):
 # |_| |_| |_|\__,_|_|_| |_|
 
 if(__name__) == '__main__':
-  # Check that we got our env vars set and save resources on error
-  # if not "WORKERS_COUNT" in os.environ or not "CHECK_KAFKA_SERVERS" in os.environ or not "CHECK_PG_USER" in os.environ or not "CHECK_PG_PASSWORD" in os.environ or not "CHECK_PG_HOST" in os.environ or not "CHECK_PG_PORT" in os.environ :
-  #   print("Some env vars are missing")
-  #   exit(1)
-
-  # env_workers_count=int(os.environ['WORKERS_COUNT'])
 
   # Catch system calls and allow clean shutdown
   signal.signal(signal.SIGTERM, signal_handler)
@@ -177,11 +201,12 @@ if(__name__) == '__main__':
 
   try:
 
-    # MEDECINEPUBSUB_KAFKA_SERVERS = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
+    # Use given Kafka servers, defaults to locally deployed server
     MEDECINEPUBSUB_KAFKA_SERVERS = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
 
     medicine = Medicine()
 
+    # Fetch one unique message and disconnect from service
     medicineConsumer = medicine.setup_consumer(MEDECINEPUBSUB_KAFKA_SERVERS)
     for message in medicineConsumer:
       medicineConsumer.commit()
@@ -190,9 +215,18 @@ if(__name__) == '__main__':
     print(tabs_order)
     medicineConsumer.close()
 
+    # Check received payload
+    if(medicine.check_tabs_order(tabs_order) is False):
+      # Received payload is incorrect : just exit with non-error code
+      # as we do not need to restart job
+      exit(0)
+
+    # Prepare Kafka producer for tabs delivery topic
     medicineProducer = medicine.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
     print("Making " + str(tabs_order['tabs_count']) + " tabs")
 
+    # Now create as many tabs factories as needed :
+    # workers count is the number of requested tabs in fetched tabs order
     with concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count']) as executor:
       try:
         futures = []
@@ -202,11 +236,15 @@ if(__name__) == '__main__':
           tabItem_request = tabs_order.copy()
           tabItem_request["seq_number"] = i+1
 
+          # Actually start tab factory and deliver
+          # in parallel
           print('Setting up worker #',i)
           futures.append(executor.submit(medicine.make_and_publish_tab, tabItem_request, medicineProducer))
 
         for future in concurrent.futures.as_completed(futures):
             print(future.result())
+
+        # Exit job properly when done
         exit(0)
 
       except ProgramKilled:

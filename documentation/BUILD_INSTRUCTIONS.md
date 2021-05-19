@@ -6,6 +6,12 @@
 
 ## Build *Patient* / publisher
 When in `medicine_pubsub/` directory :
-`docker -D build -f patient/Dockerfile -t ben_loftorbital/test_patient_0 .`
+```shell
+docker -D build -f patient/Dockerfile -t ben_loftorbital/test_patient_0 .
+```
 
 ## Build *Medicine* / consumer
+When in `medicine_pubsub/` directory :
+```shell
+docker -D build -f medicine/Dockerfile -t localhost:5000/ben_loftorbital/test_medicine_0 .
+```

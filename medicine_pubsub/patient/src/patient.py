@@ -20,7 +20,7 @@ class Patient:
   Handles tools for tabs order crafting and forwarding to Kafka topic
   """
 
-  def __init__(self, patient_id=None, max_tabs_count=30, period=1):
+  def __init__(self, patient_id=None, max_tabs_count=None, period=None):
     """
     Constructor sets up properties from needed arguments :
     patient_id: str
@@ -35,6 +35,11 @@ class Patient:
     """
     if not patient_id:
       patient_id = uuid.uuid4().__str__()
+    if max_tabs_count is None:
+      max_tabs_count=30
+    if period is None:
+      period=1
+
     self.period         = period
     self.patient_id     = patient_id
     self.max_tabs_count = max_tabs_count
@@ -66,15 +71,6 @@ class Patient:
           bootstrap_servers=kafka_servers_string,
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
-      # self.producer = KafkaProducer(
-      #   bootstrap_servers=kafka_servers_string,
-      #   value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-      #   security_protocol='SSL',
-      #   ssl_check_hostname=True,
-      #   ssl_cafile='ca.pem',
-      #   ssl_certfile='service.cert',
-      #   ssl_keyfile='service.key'
-      # ) 
     except Exception as e:
       print(e.__str__())
       self.send_error_to_DLQ({'step':'medicine.setup_producer', 'error':'Could not instanciate Medicine helper kafka producer'})
@@ -122,7 +118,9 @@ class Patient:
         return self.stop_periodic_requests()
         
       try:
+        # Actually send out our tabs order to orders topic
         self.producer.send('tabs.orders', order)
+        
         print(order['patient_id'] + ' / '  + str(order['order_timestamp_ns']) + ' : Sent order to Kafka (' + str(order['tabs_count']) + ' tabs)')
       except Exception as e:
         self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Kafka', 'order':order})
@@ -179,36 +177,25 @@ if(__name__) == '__main__':
 
   try:
     # Check that we got our env vars set
-    ORBITAL_PATIENT_ID = None
-    if  "ORBITAL_PATIENT_ID" in os.environ:
-      ORBITAL_PATIENT_ID = os.environ['ORBITAL_PATIENT_ID']
+    ORBITAL_PATIENT_ID            = os.environ.get("ORBITAL_PATIENT_ID")
+    ORBITAL_MAX_TABS_COUNT        = os.environ.get("ORBITAL_MAX_TABS_COUNT")
+    ORBITAL_ORDER_PERIOD_SECONDS  = os.environ.get("ORBITAL_ORDER_PERIOD_SECONDS")
+    MEDECINEPUBSUB_KAFKA_SERVERS  = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
 
-    ORBITAL_MAX_TABS_COUNT = None
-    if  "ORBITAL_MAX_TABS_COUNT" in os.environ:
-      ORBITAL_MAX_TABS_COUNT = os.environ['ORBITAL_MAX_TABS_COUNT']
+    # And then instantiate with provided values
+    # (defaults are applied if not provided)
+    instance = Patient(ORBITAL_PATIENT_ID, ORBITAL_MAX_TABS_COUNT, ORBITAL_ORDER_PERIOD_SECONDS)
 
-    ORBITAL_ORDER_PERIOD_SECONDS = None
-    if  "ORBITAL_ORDER_PERIOD_SECONDS" in os.environ:
-      ORBITAL_ORDER_PERIOD_SECONDS = os.environ['ORBITAL_ORDER_PERIOD_SECONDS']
-
-    # # MEDECINEPUBSUB_KAFKA_SERVERS="kafka-3156b977-soille-1151.aivencloud.com:24073"
-    # MEDECINEPUBSUB_KAFKA_SERVERS="medicine-pubsub-kafka-bootstrap:9092"
-    # if  "MEDECINEPUBSUB_KAFKA_SERVERS" in os.environ:
-    #   MEDECINEPUBSUB_KAFKA_SERVERS = os.environ['MEDECINEPUBSUB_KAFKA_SERVERS']  
-
-    # MEDECINEPUBSUB_KAFKA_SERVERS = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
-    MEDECINEPUBSUB_KAFKA_SERVERS = os.environ.get('MEDECINEPUBSUB_KAFKA_SERVERS', "medicine-pubsub-kafka-bootstrap:9092")
-
-
-    instance = Patient()
     if(instance is None):
       raise RuntimeError("Could not instanciate Medicine tool")
 
+    # Prepare producer to Kafka
     print("setup producer " + MEDECINEPUBSUB_KAFKA_SERVERS)
     producer = instance.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
     if(producer is None):
       raise RuntimeError("Could not instanciate Medicine tool's kafka producer")
 
+    # Actually start ininite loop
     instance.start_periodic_requests()
 
   except ProgramKilled :
@@ -221,4 +208,5 @@ if(__name__) == '__main__':
 
   except Exception as e:
     # No need to wait for clean shutdown, error was internal
+    # Pod would be restarted, let's issue some error return code
     exit(1)

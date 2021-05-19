@@ -56,8 +56,8 @@ _Medicine_ is in charge of ONE `tabs_order` message :
 - getting only one `tabs_order` message from *Kafka* topic
 - checking `tab_order` incoming payload
 - parallel creation of `tab_item` json objects
-- publishing crafted tabs json objects to `tabs.deliveries` *Kafka* topic, for subsequent delivery handling (out of scope)
-- exit
+- publishing crafted `tab_item` json objects to `tabs.deliveries` *Kafka* topic, for subsequent delivery handling (out of scope)
+- exit and allow another job to start
 
 #### K8s Resource type
 This _Medicine_ process should run in a _docker_ container, orchestrated by _Kubernetes_ and `KEDA` as a **ScaledJob**, with a `Kafka` type *trigger* :
@@ -65,3 +65,15 @@ This _Medicine_ process should run in a _docker_ container, orchestrated by _Kub
 - process should start in a decoupled manner
 - numerous jobs may be started, depending on *Patient* process activity
 - process must create every tab of order in same time, and not create huge buffer needs
+
+## Pros and cons
+The current implementation of this facility provides with great advantages, as well as some limitations. See [Yet to be done paragraph](README.md#yet-to-be-done)
+
+### Pros
+- autoscale correctly, based on computation needs ; no need, no load
+- eventual tabs making delay can be buffered by Kafka, allowing computation of ALL orders, even though patients would stop producing orders or more patients would join in
+
+### Cons
+- autoscaling features are dependent on Kafka topics partitions count
+- coldstart time is longer than actual payload cimputation time
+- message consumption is *not really* realtime, as autoscaler polls periodically and performs autoscaling actions periodically too

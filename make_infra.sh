@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#  ___        __           
+# |_ _|_ __  / _|_ __ __ _ 
+#  | || '_ \| |_| '__/ _` |
+#  | || | | |  _| | | (_| |
+# |___|_| |_|_| |_|  \__,_|
+
 echo "----- Installing Kafka stack with Strimzi -----"
 kubectl apply -f 'https://strimzi.io/install/latest?namespace=default' -n default
 echo "-- Successfully installed following crds"
@@ -7,7 +13,7 @@ kubectl get crds | grep kafka
 
 echo "----- Deploying Kafka services -----"
 kubectl apply -f deploy/kafka-strimzi.yaml -n default
-echo "-- Waiting for Kafka deployment (can take several minutes, please be patient)"
+echo '-- Waiting for Kafka deployment (can take several minutes, please be patient)'
 kubectl wait kafka/medicine-pubsub --for=condition=Ready --timeout=1200s -n default
 
 echo "----- Installing KEDA -----"

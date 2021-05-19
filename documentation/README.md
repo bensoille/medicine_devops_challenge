@@ -1,5 +1,5 @@
 # Medicine PubSup Specifications
-> Summarized documentation is available [here](../README.md) for a more *functional* point of view
+> Summarized documentation and quickstart is available [here](../README.md) for a more *functional* point of view
 
 ## Patient / producer
 ### Synopsis
@@ -39,7 +39,7 @@ This _Patient_ process should run in a _docker_ container, orchestrated by _Kube
 ### Synopsis
 _Medicine_ is in charge of :
 - subscription to `tabs.orders` *Kafka* topic
-- getting only one `tabs_order` message from *Kafka* topic
+- getting **only one** `tabs_order` message from *Kafka* topic
 - checking `tabs_order` incoming payload
 - creation of as many workers as payload's `tabs_count` with `ThreadPoolController`
 - parallel distribution of tabs creation to each worker in `ThreadPool`
@@ -51,22 +51,22 @@ _Medicine_ is in charge of :
 
 ### Configuration items
 The _Medicine_ process accepts following **editable** configuration items, at startup time :
-- kafka *orders topic* to read tabs requests/orders from
-- kafka *deliveries topic* to send made tabs to
-- kafka topic used for DLQ
-- kafka *keda* credentials
-- kafka *pub/sub* credentials
+- Optional kafka servers string, when used with external service
 
 ### Tabs items factory
 The _Medicine_ process reads a `tabs_order`, and crafts multiple `tab_item` *json* objects that contain :
 - `patient_id` *string* :               the ID, or name of the patient for whom the tab has been made
 - `order_timestamp_ns` *integer* :      the date (timestamp in nanoseconds) of the original tabs order
 - `delivery_timestamp_ns` *integer* :   the date (timestamp in nanoseconds) at which the tab has been delivered to *delivery topic*
+- `order_tabs_count` *integer* :        the number of tabs requested in current order
+- `seq_in_order` *integer* :            the sequence number of currently being produced tab
 - `tab_pow` *string* :                  a proof of work, not to wait 2s in vain
+
+> The *proof of work* in `tab_pow` of `tab_item` actually stands for the material realization of tab. This is currently an unique `sha256` of `patient_id`+`order_timestamp_ns`+`seq_in_order`.
 
 ### K8s Resource type
 This _Medicine_ process should run in a _docker_ container, orchestrated by _Kubernetes_ and `KEDA` as a **ScaledJob**, with a `Kafka` type *trigger* :
 - no network access to micro service is needed so far
 - process should start in a decoupled manner
 - numerous jobs may be started, depending on *Patient* process activity
-- process must create every tab of order in same time, and not create huge buffered needs
+- process must create every ordered tab in parallel, and not create huge buffered needs
