@@ -105,6 +105,9 @@ Get log of patient service in each *medicine maker* POD :
 kubectl logs -f <medicine-maker-0 pod name>
 ```
 
+## PODs list
+See how pods are being orchestrated with `kubectl get pods`
+
 ## Add more patients
 This current automatic setup leaves you with only ONE running patient. One can add additional patients by adding replicas to the *patient-0 deployment*:
 ```shell
