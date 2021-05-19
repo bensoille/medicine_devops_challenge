@@ -17,10 +17,14 @@ Technical stack :
 - `bash`
 
 Optional resources :
-- Kafka credentials (only needed for external *Kafka* service, not used in current automatic setup)
+- Eventual external Kafka service credentials (not needed in current automatic setup, only needed for external *Kafka* service)
 
 > Default Minikube dimensions are too small, regarding the stack that is going to be deployed (*Kafka* service, *KEDA*). Please provision at least 6 CPUs and 8GB of RAM to run smoothly :
 > `minikube start --cpus=6 --memory=8g`
+
+This quickstart automatic procedure will leave you with following resources up and running, **with ONE patient producing tabs orders** :
+
+![Target architecture, the big picture](documentation/assets/archi_aspersetup.png)
 
 ## Prepare infra
 > A [convenience script](make_infra.sh) is available for *bash*. That shell script performs all setup tasks
@@ -100,6 +104,9 @@ Get log of patient service in each *medicine maker* POD :
 ```shell
 kubectl logs -f <medicine-maker-0 pod name>
 ```
+
+## PODs list
+See how pods are being orchestrated with `kubectl get pods`
 
 ## Add more patients
 This current automatic setup leaves you with only ONE running patient. One can add additional patients by adding replicas to the *patient-0 deployment*:

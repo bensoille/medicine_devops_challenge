@@ -42,7 +42,7 @@ _Patient_ is in charge of following infinite loop :
 - publish this crafted `tabs_order` to `tabs.orders` _Kafka_ topic
 - wait 1 second (configurable) and loop
 
-> The process builds a new `tabs_order` object periodically, frequence is configured via environment variable, at startup time
+> The process builds a new `tabs_order` object periodically, frequence is configured via environment variable. See [detailed definition of `tabs_order` object](documentation/README.md#tabs-order-factory) and learn more.
 
 #### K8s Resource type
 This _Patient_ process should run in a _docker_ container, orchestrated by _Kubernetes_ as a **Deployment** :
@@ -59,6 +59,8 @@ _Medicine_ is in charge of ONE `tabs_order` message :
 - publishing crafted `tab_item` json objects to `tabs.deliveries` *Kafka* topic, for subsequent delivery handling (out of scope)
 - exit and allow another job to start
 
+> See [detailed definition of `tab_item` object](documentation/README.md#tab-item-factory) and learn more.
+
 #### K8s Resource type
 This _Medicine_ process should run in a _docker_ container, orchestrated by _Kubernetes_ and `KEDA` as a **ScaledJob**, with a `Kafka` type *trigger* :
 - no network access to micro service is needed so far
@@ -70,6 +72,7 @@ This _Medicine_ process should run in a _docker_ container, orchestrated by _Kub
 The current implementation of this facility provides with great advantages, as well as some limitations. See [Yet to be done paragraph](README.md#yet-to-be-done)
 
 ### Pros
+- tabs ordering and production are decoupled, allowing to distribut work in a smart way
 - autoscale correctly, based on computation needs ; no need, no load
 - eventual tabs making delay can be buffered by Kafka, allowing computation of ALL orders, even though patients would stop producing orders or more patients would join in
 
