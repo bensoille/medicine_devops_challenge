@@ -70,6 +70,7 @@ This _Medicine_ process should run in a _docker_ container, orchestrated by _Kub
 The current implementation of this facility provides with great advantages, as well as some limitations. See [Yet to be done paragraph](README.md#yet-to-be-done)
 
 ### Pros
+- tabs ordering and production are decoupled, allowing to distribut work in a smart way
 - autoscale correctly, based on computation needs ; no need, no load
 - eventual tabs making delay can be buffered by Kafka, allowing computation of ALL orders, even though patients would stop producing orders or more patients would join in
 
