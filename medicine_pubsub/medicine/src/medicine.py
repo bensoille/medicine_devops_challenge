@@ -168,7 +168,7 @@ class Medicine:
     Returns a reference to send result, None otherwise
     """
     try:
-      sendRes = self.producer.send('url-check.DLQ', error_jsonizable_object)
+      sendRes = self.producer.send('tabs.dlq', error_jsonizable_object)
       print('Sent message to DLQ : ' + error_jsonizable_object['error'])
       return sendRes
     except:
