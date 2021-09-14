@@ -32,7 +32,7 @@ This quickstart automatic procedure will leave you with following resources up a
 
 See [detailed instructions](documentation/PREPARE_INFRA.md) and learn what this [convenience script](make_infra.sh) sets up for you :
 - deploys Kafka service to kubernetes
-- deploys KEDA facilities to kubernetes
+- deploys KEDA facilities to kubernetes (minikube only)
 - creates required topics in Kafka
 
 ## Build instructions
@@ -44,7 +44,7 @@ See [detailed instructions](documentation/PREPARE_INFRA.md) and learn what this 
 > **This script will be used by developers, as it updates application logic Docker images, in k8s**
 
 See [detailed build instructions](documentation/BUILD_INSTRUCTIONS.md) and learn what this [convenience build script](make_build.sh) does for you :
-- starts a local docker registry in *minikube*
+- starts a local docker registry in *minikube* (minikube only)
 - builds *patient* and *medicine* Docker images
 - and tags images to local *minikube* Docker registry
 
@@ -118,5 +118,5 @@ kubectl scale -n default deployment patient-0 --replicas=<new replica count>
 The *medicine tabs* production jobs count will scale accordingly (up or down). Indeed, setting *replicas* to 0 does pause patient tabs orders production. However, *medicine workers* will catch up enventually buffered orders.
 
 # Yet to be done
-- Refactor and use permanent consumer that creates jobs in k8s ; instead of leaving autoscaling of jobs to KEDA (coldstart, topic partitions number dependency, more realtime)
+- Remove *Kafka* and use *Redis* as a *PubSub* service ; get rid of *partitions count workers limit*
 - Better use DLQ and implement a recovery strategy by retrying saved failed payloads
