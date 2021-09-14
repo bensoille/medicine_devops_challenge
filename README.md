@@ -11,16 +11,14 @@ Please see :
 # Quick start
 ## Prerequisites
 Technical stack :
-- **Minikube running** with `minikube start --cpus=6 --memory=8g`
+- **Microk8s running** with `microk8s start`
+- `KEDA` *microk8s* addon enabled
 - Docker
 - `kubectl`
 - `bash`
 
 Optional resources :
 - Eventual external Kafka service credentials (not needed in current automatic setup, only needed for external *Kafka* service)
-
-> Default Minikube dimensions are too small, regarding the stack that is going to be deployed (*Kafka* service, *KEDA*). Please provision at least 6 CPUs and 8GB of RAM to run smoothly :
-> `minikube start --cpus=6 --memory=8g`
 
 This quickstart automatic procedure will leave you with following resources up and running, **with ONE patient producing tabs orders** :
 
@@ -34,7 +32,7 @@ This quickstart automatic procedure will leave you with following resources up a
 
 See [detailed instructions](documentation/PREPARE_INFRA.md) and learn what this [convenience script](make_infra.sh) sets up for you :
 - deploys Kafka service to kubernetes
-- deploys KEDA facilities to kubernetes
+- deploys KEDA facilities to kubernetes (minikube only)
 - creates required topics in Kafka
 
 ## Build instructions
@@ -46,7 +44,7 @@ See [detailed instructions](documentation/PREPARE_INFRA.md) and learn what this 
 > **This script will be used by developers, as it updates application logic Docker images, in k8s**
 
 See [detailed build instructions](documentation/BUILD_INSTRUCTIONS.md) and learn what this [convenience build script](make_build.sh) does for you :
-- starts a local docker registry in *minikube*
+- starts a local docker registry in *minikube* (minikube only)
 - builds *patient* and *medicine* Docker images
 - and tags images to local *minikube* Docker registry
 
@@ -87,6 +85,10 @@ Tabs items produced by medicine worker(s) can be seen going through `tabs.delive
 kubectl exec -it medicine-pubsub-kafka-1 \
 -- bin/kafka-console-consumer.sh --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --topic tabs.deliveries
 ```
+### See messages lag
+```shell
+kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-consumer-groups.sh --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --describe --group tabs_makers
+```
 
 ## Logs
 > This can be tricky, as each POD has logs, one would have to manually inspect multiple PODs
@@ -116,5 +118,5 @@ kubectl scale -n default deployment patient-0 --replicas=<new replica count>
 The *medicine tabs* production jobs count will scale accordingly (up or down). Indeed, setting *replicas* to 0 does pause patient tabs orders production. However, *medicine workers* will catch up enventually buffered orders.
 
 # Yet to be done
-- Refactor and use permanent consumer that creates jobs in k8s ; instead of leaving autoscaling of jobs to KEDA (coldstart, topic partitions number dependency, more realtime)
+- Remove *Kafka* and use *Redis* as a *PubSub* service ; get rid of *partitions count workers limit*
 - Better use DLQ and implement a recovery strategy by retrying saved failed payloads

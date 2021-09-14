@@ -1,0 +1,28 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: medicine-maker-scaler
+spec:
+  scaleTargetRef:
+    name: medicine-maker-0
+  pollingInterval: 60
+  cooldownPeriod:  300
+  minReplicaCount: 0
+  maxReplicaCount: 50
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 60
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: 10.152.183.30:9092
+      consumerGroup: tabs_makers
+      topic: 'tabs.orders'
+      offsetResetPolicy: earliest
+       

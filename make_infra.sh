@@ -7,17 +7,20 @@
 # |___|_| |_|_| |_|  \__,_|
 
 echo "----- Installing Kafka stack with Strimzi -----"
-kubectl apply -f 'https://strimzi.io/install/latest?namespace=default' -n default
+#kubectl apply -f 'https://strimzi.io/install/latest?namespace=default' -n default
+kubectl apply -f 'https://strimzi.io/install/latest?namespace=kafka'
 echo "-- Successfully installed following crds"
 kubectl get crds | grep kafka
 
 echo "----- Deploying Kafka services -----"
-kubectl apply -f deploy/kafka-strimzi.yaml -n default
+#kubectl apply -f deploy/kafka-strimzi.yaml -n default
+kubectl apply -f deploy/kafka-strimzi.yaml
 echo '-- Waiting for Kafka deployment (can take several minutes, please be patient)'
-kubectl wait kafka/medicine-pubsub --for=condition=Ready --timeout=1200s -n default
+#kubectl wait kafka/medicine-pubsub --for=condition=Ready --timeout=1200s -n default
+kubectl wait kafka/medicine-pubsub --for=condition=Ready --timeout=1200s -n kafka
 
-echo "----- Installing KEDA -----"
-kubectl apply -f deploy/keda-2.2.0.yaml
+#echo "----- Installing KEDA -----"
+#kubectl apply -f deploy/keda-2.2.0.yaml
 
 echo "----- Creating Topics in Kafka -----"
 echo "-- topic tabs.orders"

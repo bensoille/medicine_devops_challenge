@@ -16,5 +16,4 @@ spec:
     spec:
       containers:
       - name: patient
-        image: localhost:5000/ben_loftorbital/test_patient_0
-        imagePullPolicy: IfNotPresent
+        image: localhost:32000/ben_loftorbital/test_patient_0
