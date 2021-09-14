@@ -2,7 +2,7 @@ import os, json, uuid
 import time, threading, signal
 from random import randint
 
-from kafka import KafkaProducer
+from walrus import Database  # A subclass of the redis-py Redis client.
 
 
 #  ____       _   _            _   

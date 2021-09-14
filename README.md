@@ -17,6 +17,15 @@ Technical stack :
 - `kubectl`
 - `bash`
 
+You may need to enable **add-ons** in **microk8s** :
+```shell
+sudo microk8s enable helm keda
+```
+
+> You may also need to create aliases if you use *microk8s* :
+> `alias kubectl='sudo microk8s kubectl`
+> `alias helm='sudo microk8s helm3`
+
 Optional resources :
 - Eventual external Kafka service credentials (not needed in current automatic setup, only needed for external *Kafka* service)
 
