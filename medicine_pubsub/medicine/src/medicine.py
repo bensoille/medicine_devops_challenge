@@ -206,54 +206,56 @@ if(__name__) == '__main__':
 
     medicine = Medicine()
 
-    # Fetch one unique message and disconnect from service
+    # Prepare Kafka producer for tabs delivery topic
+    medicineProducer = medicine.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
+
+    # Fetch messages
     medicineConsumer = medicine.setup_consumer(MEDECINEPUBSUB_KAFKA_SERVERS)
+    countProcessed=0
     for message in medicineConsumer:
       medicineConsumer.commit()
       tabs_order = message.value
-      break
-    print(tabs_order)
-    medicineConsumer.close()
+      print(tabs_order)
 
-    # Check received payload
-    if(medicine.check_tabs_order(tabs_order) is False):
-      # Received payload is incorrect : just exit with non-error code
-      # as we do not need to restart job
-      exit(0)
+      # Check received payload
+      if(medicine.check_tabs_order(tabs_order) is False):
+        # Received payload is incorrect : just warn and next
+        print("Error when checkin tabs order")
+        next
 
-    # Prepare Kafka producer for tabs delivery topic
-    medicineProducer = medicine.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
-    print("Making " + str(tabs_order['tabs_count']) + " tabs")
+      print("Making " + str(tabs_order['tabs_count']) + " tabs")
+      countProcessed += 1
+      print('Processed ' + str(countProcessed) + ' messages')
+      # Now create as many tabs factories as needed :
+      # workers count is the number of requested tabs in fetched tabs order
+      with concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count']) as executor:
+        try:
+          futures = []
+          # Instanciate as many times as wanted workers
+          for i in range(tabs_order['tabs_count']):
+            # Record this tab order seq number
+            tabItem_request = tabs_order.copy()
+            tabItem_request["seq_number"] = i+1
 
-    # Now create as many tabs factories as needed :
-    # workers count is the number of requested tabs in fetched tabs order
-    with concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count']) as executor:
-      try:
-        futures = []
-        # Instanciate as many times as wanted workers
-        for i in range(tabs_order['tabs_count']):
-          # Record this tab order seq number
-          tabItem_request = tabs_order.copy()
-          tabItem_request["seq_number"] = i+1
+            # Actually start tab factory and deliver
+            # in parallel
+            print('Setting up worker #',i)
+            futures.append(executor.submit(medicine.make_and_publish_tab, tabItem_request, medicineProducer))
 
-          # Actually start tab factory and deliver
-          # in parallel
-          print('Setting up worker #',i)
-          futures.append(executor.submit(medicine.make_and_publish_tab, tabItem_request, medicineProducer))
+          for future in concurrent.futures.as_completed(futures):
+              print(future.result())
 
-        for future in concurrent.futures.as_completed(futures):
-            print(future.result())
+          # Exit job properly when done
+          #exit(0)
 
-        # Exit job properly when done
-        exit(0)
+        except ProgramKilled:
+          # Caught system interrupt, stop loop
+          print("Killing, please wait for clean shutdown")
+          executor.shutdown(wait=False)
 
-      except ProgramKilled:
-        # Caught system interrupt, stop loop
-        print("Killing, please wait for clean shutdown")
-        executor.shutdown(wait=False)
-
-        time.sleep(1)
-        exit(0)
+          time.sleep(1)
+          medicineConsumer.close()
+          exit(0)
 
   except Exception as error:
     print(error)

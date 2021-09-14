@@ -87,6 +87,10 @@ Tabs items produced by medicine worker(s) can be seen going through `tabs.delive
 kubectl exec -it medicine-pubsub-kafka-1 \
 -- bin/kafka-console-consumer.sh --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --topic tabs.deliveries
 ```
+### See messages lag
+```shell
+kubectl exec -it medicine-pubsub-kafka-0 -- bin/kafka-consumer-groups.sh --bootstrap-server medicine-pubsub-kafka-bootstrap:9092 --describe --group tabs_makers
+```
 
 ## Logs
 > This can be tricky, as each POD has logs, one would have to manually inspect multiple PODs
