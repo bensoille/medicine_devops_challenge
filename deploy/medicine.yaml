@@ -1,28 +1,19 @@
-apiVersion: keda.sh/v1alpha1
-kind: ScaledJob
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: medicine-maker-0
+  labels:
+    app: medicine
 spec:
-  jobTargetRef:
-    parallelism: 1
-    template:
-      spec:
-        containers:
-        - name: medicine
-          image: localhost:5000/ben_loftorbital/test_medicine_0
-          imagePullPolicy: IfNotPresent
-        restartPolicy: OnFailure
-    backoffLimit: 4  
-  pollingInterval: 1
-  maxReplicaCount: 18
-  successfulJobsHistoryLimit: 3
-  scalingStrategy:
-    strategy: "accurate"
-  triggers:
-  - type: kafka
+  replicas: 1
+  selector:
+    matchLabels:
+      app: medicine
+  template:
     metadata:
-      bootstrapServers: medicine-pubsub-kafka-bootstrap:9092
-      consumerGroup: tabs_makers
-      topic: 'tabs.orders'
-      offsetResetPolicy: earliest
-     
+      labels:
+        app: medicine
+    spec:
+      containers:
+      - name: medicine
+        image: localhost:32000/ben_loftorbital/test_medicine_0
