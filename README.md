@@ -11,16 +11,14 @@ Please see :
 # Quick start
 ## Prerequisites
 Technical stack :
-- **Minikube running** with `minikube start --cpus=6 --memory=8g`
+- **Microk8s running** with `microk8s start`
+- `KEDA` *microk8s* addon enabled
 - Docker
 - `kubectl`
 - `bash`
 
 Optional resources :
 - Eventual external Kafka service credentials (not needed in current automatic setup, only needed for external *Kafka* service)
-
-> Default Minikube dimensions are too small, regarding the stack that is going to be deployed (*Kafka* service, *KEDA*). Please provision at least 6 CPUs and 8GB of RAM to run smoothly :
-> `minikube start --cpus=6 --memory=8g`
 
 This quickstart automatic procedure will leave you with following resources up and running, **with ONE patient producing tabs orders** :
 
