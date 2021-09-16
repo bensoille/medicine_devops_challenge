@@ -3,7 +3,7 @@ import time, threading, signal
 from random import randint
 
 from walrus import Database  # A subclass of the redis-py Redis client.
-
+db = Database(host='172.17.0.2')
 
 #  ____       _   _            _   
 # |  _ \ __ _| |_(_) ___ _ __ | |_ 
@@ -56,24 +56,10 @@ class Patient:
     Returns a ref to producer, or None on error
     """
     try:
-      if os.path.isfile('medicine_pubsub/certs/service.cert'):
-        self.producer = KafkaProducer(
-          bootstrap_servers=kafka_servers_string,
-          value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-          security_protocol='SSL',
-          ssl_check_hostname=True,
-          ssl_cafile='medicine_pubsub/certs/ca.pem',
-          ssl_certfile='medicine_pubsub/certs/service.cert',
-          ssl_keyfile='medicine_pubsub/certs/service.key'
-        )
-      else:
-        self.producer = KafkaProducer(
-          bootstrap_servers=kafka_servers_string,
-          value_serializer=lambda v: json.dumps(v).encode('utf-8')
-        )
+      self.producer = db
     except Exception as e:
       print(e.__str__())
-      self.send_error_to_DLQ({'step':'medicine.setup_producer', 'error':'Could not instanciate Medicine helper kafka producer'})
+      self.send_error_to_DLQ({'step':'medicine.setup_producer', 'error':'Could not instanciate Medicine helper redis producer'})
       return None
 
     return self.producer
@@ -92,6 +78,7 @@ class Patient:
     now_ts_ns = time.time_ns()
 
     built_order = {
+      'step'      : 'creating_tab',
       'patient_id': self.patient_id,
       'tabs_count': rand_number,
       'order_timestamp_ns': now_ts_ns
@@ -119,11 +106,11 @@ class Patient:
         
       try:
         # Actually send out our tabs order to orders topic
-        self.producer.send('tabs.orders', order)
+        xaddreturn = self.producer.xadd('tabsorders', order)
         
-        print(order['patient_id'] + ' / '  + str(order['order_timestamp_ns']) + ' : Sent order to Kafka (' + str(order['tabs_count']) + ' tabs)')
+        print(order['patient_id'] + ' / '  + str(order['order_timestamp_ns']) + ' : Sent order to Redis stream (' + str(order['tabs_count']) + ' tabs) - ' + str(xaddreturn))
       except Exception as e:
-        self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Kafka', 'order':order})
+        self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Redis stream', 'order':order})
         return self.stop_periodic_requests()
 
 
@@ -145,7 +132,7 @@ class Patient:
     Returns a reference to send result, None otherwise
     """
     try:
-      sendRes = self.producer.send('tabs.dlq', error_jsonizable_object)
+      sendRes = self.producer.xadd('tabsdlq', error_jsonizable_object)
       print('Sent message to DLQ : ' + error_jsonizable_object['error'])
       return sendRes
     except:

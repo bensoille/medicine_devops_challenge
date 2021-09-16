@@ -68,6 +68,12 @@ See [detailed deploy instructions](documentation/DEPLOY_INSTRUCTIONS.md) and lea
 - deploys *medicine* as a *scaledJob* to kubernetes
   
 # See it work
+## Pods scaling
+See pods being created and terminated 
+```shell
+watch -n1 sudo microk8s kubectl get pods -A
+```
+
 ## Kafka topics
 > This is the most convenient way to see thing working, as flow from every POD is visible there
 
