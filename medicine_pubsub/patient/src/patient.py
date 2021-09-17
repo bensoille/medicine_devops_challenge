@@ -3,7 +3,7 @@ import time, threading, signal
 from random import randint
 
 from walrus import Database  # A subclass of the redis-py Redis client.
-db = Database(host='172.17.0.2')
+db = Database(host='redis-cluster-medicine')
 
 #  ____       _   _            _   
 # |  _ \ __ _| |_(_) ___ _ __ | |_ 
@@ -177,7 +177,7 @@ if(__name__) == '__main__':
       raise RuntimeError("Could not instanciate Medicine tool")
 
     # Prepare producer to Kafka
-    print("setup producer " + MEDECINEPUBSUB_KAFKA_SERVERS)
+    print("setup producer")
     producer = instance.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
     if(producer is None):
       raise RuntimeError("Could not instanciate Medicine tool's kafka producer")

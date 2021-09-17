@@ -3,7 +3,7 @@ import time, signal
 import concurrent.futures
 
 from walrus import Database  # A subclass of the redis-py Redis client.
-db = Database(host='172.17.0.2')
+db = Database(host='redis-cluster-medicine')
 
 #  __  __          _ _      _            
 # |  \/  | ___  __| (_) ___(_)_ __   ___ 
