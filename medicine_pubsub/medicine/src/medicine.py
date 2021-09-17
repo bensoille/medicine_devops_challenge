@@ -1,9 +1,9 @@
-import os, json, hashlib
+import os, json, hashlib, uuid
 import time, signal
 import concurrent.futures
 
 from walrus import Database  # A subclass of the redis-py Redis client.
-db = Database(host='redis-cluster-medicine')
+db = Database(host='redis')
 
 #  __  __          _ _      _            
 # |  \/  | ___  __| (_) ___(_)_ __   ___ 
@@ -36,10 +36,13 @@ class Medicine:
     Returns a ref to consumer, or None on error
     """
     try:
+      # print("Sending init connection message {}".format(self.producer))
       self.producer.xadd('tabsorders', {'step': 'connecting_consumer'})
-      cg = db.consumer_group('cgtabsmaker', ['tabsorders'])
+      # print("Init CG")
+      cg = db.consumer_group('cgtabsmaker', ['tabsorders'], uuid.uuid4().__str__())
+      # print("Create CG")
       cg_created = cg.create()
-      print(cg_created)
+      # print(cg_created)
       if('tabsorders' in cg_created.keys() and cg_created['tabsorders'] == True):
         print('Creating consumer group in redis')
         cg.set_id('$')
@@ -50,7 +53,7 @@ class Medicine:
       self.consumer = cg
 
     except Exception as e:
-      print(e.__str__())
+      print("{}".format(e))
       self.send_error_to_DLQ({'step':'storage.setup_consumer', 'error':'Could not instanciate Medicine helper redis consumer'})
       return None
 
@@ -184,14 +187,17 @@ if(__name__) == '__main__':
     medicine = Medicine()
 
     # Prepare Kafka producer for tabs delivery topic
+    # print("Setup producer")
     medicineProducer = medicine.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
 
     # Fetch messages
+    # print("Setup consumer")
     medicineConsumer = medicine.setup_consumer(MEDECINEPUBSUB_KAFKA_SERVERS)
     countProcessed=0
 
     while True:
       futures = []
+      # print('Trying to consume', medicineConsumer)
       messages_to_process = medicineConsumer.read(count=100)
       if(len(messages_to_process) == 0):
         print('No message to process, sleeping 2 seconds')
@@ -220,7 +226,7 @@ if(__name__) == '__main__':
           # Check received payload
           if(medicine.check_tabs_order(messageData) is False):
             # Received payload is incorrect : just warn and continue
-            print("Error when checkin tabs order, skipping (step {messageData['step']})")
+            print("Error when checkin tabs order, skipping (step {})".format(messageData['step']))
             medicineConsumer.tabsorders.ack(messageId)
             continue                  
 

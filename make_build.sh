@@ -21,4 +21,8 @@ echo "----- Building _Medicine_ docker image -----"
 docker -D build -f medicine/Dockerfile -t localhost:32000/ben_loftorbital/test_medicine_0 .
 docker push localhost:32000/ben_loftorbital/test_medicine_0
 
+echo "----- Building _Medicine monitor_ docker image -----"
+docker -D build -f monitor/Dockerfile -t localhost:32000/ben_loftorbital/test_monitor_0 .
+docker push localhost:32000/ben_loftorbital/test_monitor_0
+
 cd -

@@ -6,13 +6,15 @@
 #  | || | | |  _| | | (_| |
 # |___|_| |_|_| |_|  \__,_|
 
+# echo "----- Installing Redis  -----"
+kubectl apply -f deploy/redis.yaml -n default
 
-echo "----- Installing Redis cluster with Bitnami -----"
-# alias kubectl='sudo microk8s kubectl'
-# alias helm='sudo microk8s helm3'
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
-helm install redis-cluster-medicine bitnami/redis-cluster
+# echo "----- Installing Redis cluster with Bitnami -----"
+# # alias kubectl='sudo microk8s kubectl'
+# # alias helm='sudo microk8s helm3'
+# helm repo add bitnami https://charts.bitnami.com/bitnami
+# helm repo update
+# helm install redis-cluster-medicine bitnami/redis-cluster
 
 # To get your password run:
 #     export REDIS_PASSWORD=$(kubectl get secret --namespace "default" redis-cluster-medicine -o jsonpath="{.data.redis-password}" | base64 --decode)
@@ -20,9 +22,9 @@ helm install redis-cluster-medicine bitnami/redis-cluster
 # You have deployed a Redis Cluster accessible only from within you Kubernetes Cluster.INFO: The Job to create the cluster will be created.To connect to your Redis&trade; cluster:
 
 # 1. Run a Redis pod that you can use as a client:
-kubectl run --namespace default redis-cluster-medicine-client --rm --tty -i --restart='Never' \
- --env REDIS_PASSWORD=$REDIS_PASSWORD \
---image docker.io/bitnami/redis-cluster:6.2.5-debian-10-r32 -- bash
+# kubectl run --namespace default redis-cluster-medicine-client --rm --tty -i --restart='Never' \
+#  --env REDIS_PASSWORD=$REDIS_PASSWORD \
+# --image docker.io/bitnami/redis-cluster:6.2.5-debian-10-r32 -- bash
 
 # 2. Connect using the Redis&trade; CLI:
 

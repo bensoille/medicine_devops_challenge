@@ -3,7 +3,7 @@ import time, threading, signal
 from random import randint
 
 from walrus import Database  # A subclass of the redis-py Redis client.
-db = Database(host='redis-cluster-medicine')
+db = Database(host='redis')
 
 #  ____       _   _            _   
 # |  _ \ __ _| |_(_) ___ _ __ | |_ 
@@ -94,9 +94,11 @@ class Patient:
 
     Returns None on error, is blocking otherwise
     """
+    print('Starting loop')
     while not self.ticker.wait(self.period):
       #-----------------------------------------
       order = instance.build_tabs_order()
+      # print('Order done {}'.format(order))
       #-----------------------------------------
 
       if(order is None):
@@ -106,10 +108,12 @@ class Patient:
         
       try:
         # Actually send out our tabs order to orders topic
+        # print('Pushing to stream', self.producer)
         xaddreturn = self.producer.xadd('tabsorders', order)
         
         print(order['patient_id'] + ' / '  + str(order['order_timestamp_ns']) + ' : Sent order to Redis stream (' + str(order['tabs_count']) + ' tabs) - ' + str(xaddreturn))
       except Exception as e:
+        print('{}'.format(e))
         self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Redis stream', 'order':order})
         return self.stop_periodic_requests()
 
@@ -120,6 +124,7 @@ class Patient:
 
     Returns None
     """    
+    print('Stopping loop')
     self.ticker.clear()
     return None
     
@@ -177,11 +182,12 @@ if(__name__) == '__main__':
       raise RuntimeError("Could not instanciate Medicine tool")
 
     # Prepare producer to Kafka
-    print("setup producer")
+    # print("Setup producer")
     producer = instance.setup_producer(MEDECINEPUBSUB_KAFKA_SERVERS)
     if(producer is None):
       raise RuntimeError("Could not instanciate Medicine tool's kafka producer")
 
+    # print('Producer done')
     # Actually start ininite loop
     instance.start_periodic_requests()
 
@@ -194,6 +200,7 @@ if(__name__) == '__main__':
     exit(0)
 
   except Exception as e:
+    print("Error : {}".format(e))
     # No need to wait for clean shutdown, error was internal
     # Pod would be restarted, let's issue some error return code
     exit(1)

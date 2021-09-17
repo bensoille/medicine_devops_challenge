@@ -19,10 +19,10 @@ spec:
             value: 100
             periodSeconds: 60
   triggers:
-  - type: kafka
+  - type: redis-streams
     metadata:
-      bootstrapServers: 10.152.183.30:9092
-      consumerGroup: tabs_makers
-      topic: 'tabs.orders'
-      offsetResetPolicy: earliest
+      address: 10.152.183.122:6379
+      consumerGroup: cgtabsmaker
+      stream: 'tabsorders'
+      pendingEntriesCount: "10"
        
