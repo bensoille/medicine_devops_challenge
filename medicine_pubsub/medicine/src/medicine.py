@@ -214,13 +214,7 @@ if(__name__) == '__main__':
               tempMessData[datakey.decode()] = messageData[datakey].decode()
             messageData = tempMessData
 
-          if('tabs_count' not in messageData) :
-            print('No tabs count in object', messageData)
-            continue
-          tabs_order = messageData
-          tabs_order['tabs_count'] = int(tabs_order['tabs_count']) if(type(tabs_order['tabs_count']) is not int) else tabs_order['tabs_count']
-
-          print(str(messageId), str(messageData))
+          # print(str(messageId), str(messageData))
           countProcessed += 1
 
           # Check received payload
@@ -230,8 +224,10 @@ if(__name__) == '__main__':
             medicineConsumer.tabsorders.ack(messageId)
             continue                  
 
+          tabs_order = messageData
+          tabs_order['tabs_count'] = int(tabs_order['tabs_count']) if(type(tabs_order['tabs_count']) is not int) else tabs_order['tabs_count']
 
-          print("Making " + str(tabs_order['tabs_count']) + " tabs")
+          print("Making {} tabs".format(str(tabs_order['tabs_count'])))
           countProcessed += 1
           print('Processed ' + str(countProcessed) + ' messages')
           # Now create as many tabs factories as needed :
@@ -263,11 +259,11 @@ if(__name__) == '__main__':
             time.sleep(2)
             #medicineConsumer.close()
             exit(0)
-
+      results_collector = []
       for future in concurrent.futures.as_completed(futures):
-        print(future.result())
+        results_collector.append(future.result()['tab_pow'][-5:])
 
-      print('et voilà')
+      print("et voilà : {}".format(','.join(results_collector)))
 
   except Exception as error:
     print(error)
