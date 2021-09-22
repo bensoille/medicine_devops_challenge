@@ -38,11 +38,13 @@ class Patient:
     if max_tabs_count is None:
       max_tabs_count=30
     if period is None:
-      period=1
+      period=.03
 
-    self.period         = period
-    self.patient_id     = patient_id
-    self.max_tabs_count = max_tabs_count
+    self.period             = period
+    self.patient_id         = patient_id
+    self.max_tabs_count     = max_tabs_count
+    self.ordered_tabs_count = 0
+    self.orders_count       = 0
 
     self.ticker = threading.Event()
 
@@ -112,6 +114,9 @@ class Patient:
         xaddreturn = self.producer.xadd('tabsorders', order)
         
         print(order['patient_id'] + ' / '  + str(order['order_timestamp_ns']) + ' : Sent order to Redis stream (' + str(order['tabs_count']) + ' tabs) - ' + str(xaddreturn))
+        # Count sent orders and tabs for patient
+        self.ordered_tabs_count += order['tabs_count']
+        self.orders_count += 1
       except Exception as e:
         print('{}'.format(e))
         self.send_error_to_DLQ({'step':'patient.start_periodic_requests', 'error':'Could not push order to Redis stream', 'order':order})
@@ -197,6 +202,7 @@ if(__name__) == '__main__':
     instance.stop_periodic_requests()
     # Wait a couple of seconds and exit with success return code
     time.sleep(instance.period)
+    print("Ordered total of {} tabs in {} orders".format(instance.ordered_tabs_count, instance.orders_count))
     exit(0)
 
   except Exception as e:

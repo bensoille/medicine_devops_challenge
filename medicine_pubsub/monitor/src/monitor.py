@@ -1,23 +1,28 @@
-import time
-from walrus import Database  # A subclass of the redis-py Redis client.
-db = Database(host='redis')
-stream = db.Stream('tabsorders')
+import time, uuid
+from redis.client import Redis
+db = Redis(host='redis', decode_responses=True)
 # cg = db.consumer_group('cgtabsmaker', ['tabsorders'])
+# db.xadd('tabsorders', {'step': 'connecting_monitor'})
 
 while True:
 
+    allgroupsinfo = {}
+    try:
+        allgroupsinfo = db.xinfo_groups('tabsorders')
+    except Exception:
+        print('Stream does not exist')
+        exit(1)
 
-    allgroupsinfo = stream.groups_info()
     groupinfo = {}
     for grp in allgroupsinfo:
         # print(grp)
-        if(grp['name'].decode() == 'cgtabsmaker'):
+        if(grp['name'] == 'cgtabsmaker'):
             groupinfo = grp
             break
 
-    consinfo = stream.consumers_info('cgtabsmaker')
+    consinfo = db.xinfo_consumers('tabsorders', 'cgtabsmaker')
 
-    allinfo = stream.info()
+    allinfo = db.xinfo_stream('tabsorders')
 
     returned = {}
     print('='*25)
@@ -30,8 +35,8 @@ while True:
     print(allinfo)
     print('-'*25)
 
-    lastgen                  = allinfo['last-generated-id'].decode().split('-')[0]
-    lastdis                  = groupinfo['last-delivered-id'].decode().split('-')[0]
+    lastgen                  = allinfo['last-generated-id'].split('-')[0]
+    lastdis                  = groupinfo['last-delivered-id'].split('-')[0]
     returned['grouplagms']   = int(lastgen) - int(lastdis)
 
     returned['consumcount']  = groupinfo['consumers']

@@ -2,8 +2,10 @@ import os, json, hashlib, uuid
 import time, signal
 import concurrent.futures
 
-from walrus import Database  # A subclass of the redis-py Redis client.
-db = Database(host='redis')
+from redis.client import Redis
+db = Redis(host='redis', decode_responses=True)
+dbpub = Redis(host='redis', decode_responses=True)
+unique_factory_id = str(uuid.uuid4())
 
 #  __  __          _ _      _            
 # |  \/  | ___  __| (_) ___(_)_ __   ___ 
@@ -39,18 +41,33 @@ class Medicine:
       # print("Sending init connection message {}".format(self.producer))
       self.producer.xadd('tabsorders', {'step': 'connecting_consumer'})
       # print("Init CG")
-      cg = db.consumer_group('cgtabsmaker', ['tabsorders'], uuid.uuid4().__str__())
-      # print("Create CG")
-      cg_created = cg.create()
-      # print(cg_created)
-      if('tabsorders' in cg_created.keys() and cg_created['tabsorders'] == True):
+      # cg2 = db.xinfo_stream('tabsorders')
+      # print(cg2)
+      streamGroups = db.xinfo_groups('tabsorders')
+      print(streamGroups)
+      if(len(streamGroups) == 0):
         print('Creating consumer group in redis')
-        cg.set_id('$')
+        cg = db.xgroup_create('tabsorders', 'cgtabsmaker', '$')
       else:
         print('No need to create consumer group in redis')
 
+      cg4 = db.xinfo_consumers('tabsorders', 'cgtabsmaker')
+      print(cg4)
 
-      self.consumer = cg
+      
+
+      # cg = db.consumer_group('cgtabsmaker', ['tabsorders'], uuid.uuid4().__str__())
+      # print("Create CG")
+      # cg_created = cg.create()
+      # print(cg_created)
+      # if('tabsorders' in cg_created.keys() and cg_created['tabsorders'] == True):
+      #   print('Creating consumer group in redis')
+      #   cg.set_id('$')
+      # else:
+      #   print('No need to create consumer group in redis')
+
+
+      self.consumer = db
 
     except Exception as e:
       print("{}".format(e))
@@ -69,7 +86,7 @@ class Medicine:
     Returns a ref to producer, or None on error
     """
     try:
-      self.producer = db
+      self.producer = dbpub
 
     except Exception as e:
       print(e.__str__())
@@ -112,7 +129,7 @@ class Medicine:
     if(medicineProducer is not None):
       medicineProducer.xadd('tabsdeliveries', tab_item)
       if(messageId is not None) :
-        self.consumer.tabsorders.ack(messageId)
+        self.consumer.xack('tabsorders', 'cgtabsmaker', messageId)
       
     return(tab_item)
 
@@ -128,7 +145,7 @@ class Medicine:
     if('step' not in tabs_order):
       return False
     # Message is about a consumer connecting, ignore these
-    if( tabs_order['step']== 'connecting_consumer'):
+    if( tabs_order['step'] in ['connecting_consumer','connecting_monitor']):
       return False
 
     if('patient_id' not in tabs_order):
@@ -197,8 +214,38 @@ if(__name__) == '__main__':
 
     while True:
       futures = []
+      messages_to_process = []
+
+      pending_messages = medicineConsumer.xpending('tabsorders', 'cgtabsmaker')
+      print('pending',pending_messages)
+      if(pending_messages['pending'] > 0):
+        pending_messages_to_catch_up = medicineConsumer.xpending_range('tabsorders', 'cgtabsmaker', pending_messages['min'], pending_messages['max'], 100)
+        print('to catch up', pending_messages_to_catch_up)
+
+        claimed_messages_ids = []
+        for messCatchUp in pending_messages_to_catch_up:
+          claimed_messages_ids.append(messCatchUp['message_id'])
+
+        claimed_mess = medicineConsumer.xclaim('tabsorders', 'cgtabsmaker', unique_factory_id, 10000, claimed_messages_ids)
+
+        for claimed_mess_id, claimed_mess_contents in claimed_mess:
+          messages_to_process.append((claimed_mess_id, claimed_mess_contents))
+
+        print('claimed {} messages'.format(len(claimed_mess)),claimed_mess)
+
       # print('Trying to consume', medicineConsumer)
-      messages_to_process = medicineConsumer.read(count=100)
+      new_messages_to_process = medicineConsumer.xreadgroup('cgtabsmaker',
+       unique_factory_id,
+       {'tabsorders':'>'}, 
+       count=100 - len(messages_to_process))
+      if(len(new_messages_to_process) == 0):
+        print('No new message to process, {} claimed'.format(len(messages_to_process)))
+      else : 
+        for streamId, messagesFromStream in new_messages_to_process:
+          # print(streamId, messagesFromStream)
+          for messageId, messageData in messagesFromStream :        
+            messages_to_process.append((messageId, messageData))        
+
       if(len(messages_to_process) == 0):
         print('No message to process, sleeping 2 seconds')
         time.sleep(2)
@@ -210,61 +257,55 @@ if(__name__) == '__main__':
 
       # Get messages list at position 1) of first stream's (0) messages
       # messages_to_process is a list of (stream key, messages) tuples, where messages is a list of (message id, data) 2-tuples.
-      for streamId, messagesFromStream in messages_to_process:
+      # for streamId, messagesFromStream in messages_to_process:
         # print(streamId, messagesFromStream)
-        for messageId, messageData in messagesFromStream :
-          if type(messageId) is bytes :
-            messageId = messageId.decode()
-            tempMessData = {}
-            for datakey in messageData.keys():
-              tempMessData[datakey.decode()] = messageData[datakey].decode()
-            messageData = tempMessData
+      for messageId, messageData in messages_to_process :
+        # print(str(messageId), str(messageData))
+        countProcessed += 1
 
-          # print(str(messageId), str(messageData))
-          countProcessed += 1
+        # Check received payload
+        if(medicine.check_tabs_order(messageData) is False):
+          # Received payload is incorrect : just warn and continue
+          print("Error when checkin tabs order, skipping (step {})".format(messageData['step']))
+          medicineConsumer.xack('tabsorders', 'cgtabsmaker', messageId)
+          continue                  
 
-          # Check received payload
-          if(medicine.check_tabs_order(messageData) is False):
-            # Received payload is incorrect : just warn and continue
-            print("Error when checkin tabs order, skipping (step {})".format(messageData['step']))
-            medicineConsumer.tabsorders.ack(messageId)
-            continue                  
+        tabs_order = messageData
+        tabs_order['tabs_count'] = int(tabs_order['tabs_count']) if(type(tabs_order['tabs_count']) is not int) else tabs_order['tabs_count']
 
-          tabs_order = messageData
-          tabs_order['tabs_count'] = int(tabs_order['tabs_count']) if(type(tabs_order['tabs_count']) is not int) else tabs_order['tabs_count']
+        print("Making {} tabs".format(str(tabs_order['tabs_count'])))
+        countProcessed += 1
+        print('Processed ' + str(countProcessed) + ' messages')
+        # Now create as many tabs factories as needed :
+        # workers count is the number of requested tabs in fetched tabs order
+        # with concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count']) as executor:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count'])
+        try:
+          
+          # Instanciate as many times as wanted workers
+          for i in range(tabs_order['tabs_count']):
+            # Record this tab order seq number
+            tabItem_request = tabs_order.copy()
+            tabItem_request["seq_number"] = i+1
 
-          print("Making {} tabs".format(str(tabs_order['tabs_count'])))
-          countProcessed += 1
-          print('Processed ' + str(countProcessed) + ' messages')
-          # Now create as many tabs factories as needed :
-          # workers count is the number of requested tabs in fetched tabs order
-          # with concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count']) as executor:
-          executor = concurrent.futures.ThreadPoolExecutor(max_workers=tabs_order['tabs_count'])
-          try:
-            
-            # Instanciate as many times as wanted workers
-            for i in range(tabs_order['tabs_count']):
-              # Record this tab order seq number
-              tabItem_request = tabs_order.copy()
-              tabItem_request["seq_number"] = i+1
+            # Actually start tab factory and deliver
+            # in parallel
+            # print('Setting up worker #',i)
+            futures.append(executor.submit(medicine.make_and_publish_tab, tabItem_request, medicineProducer, messageId))
 
-              # Actually start tab factory and deliver
-              # in parallel
-              print('Setting up worker #',i)
-              futures.append(executor.submit(medicine.make_and_publish_tab, tabItem_request, medicineProducer, messageId))
+    
+          # Exit job properly when done
+          #exit(0)
 
-      
-            # Exit job properly when done
-            #exit(0)
+        except ProgramKilled:
+          # Caught system interrupt, stop loop
+          print("Killing, please wait for clean shutdown")
+          executor.shutdown(wait=False)
 
-          except ProgramKilled:
-            # Caught system interrupt, stop loop
-            print("Killing, please wait for clean shutdown")
-            executor.shutdown(wait=False)
-
-            time.sleep(2)
-            #medicineConsumer.close()
-            exit(0)
+          time.sleep(2)
+          #medicineConsumer.close()
+          db.xgroup_delconsumer('tabsorders', 'cgtabsmaker', unique_factory_id)
+          exit(0)
       results_collector = []
       for future in concurrent.futures.as_completed(futures):
         results_collector.append(future.result()['tab_pow'][-5:])
@@ -273,6 +314,7 @@ if(__name__) == '__main__':
 
   except Exception as error:
     print(error)
+    db.xgroup_delconsumer('tabsorders', 'cgtabsmaker', unique_factory_id)
     time.sleep(2)
     # No need to wait for clean shutdown, error was internal
     exit(1)
